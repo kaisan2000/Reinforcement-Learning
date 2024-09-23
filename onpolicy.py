@@ -1,5 +1,7 @@
 import numpy as np
 import maze
+import time
+
 from random import randint
 env = maze.Maze()
 env.reset()
@@ -9,48 +11,74 @@ Q = {}
 
 gamma = 0.99
 epsilon = 0.1
-num_episodes = 200
+num_episodes = 20
 
 for i in range(5):
     for j in range(5):
         state = (i,j)
+        Q[state] = {}
         for action in range(4):
-            Q[state , action] = np.random.rand(0,1)
+            Q[state][action] = -3* np.random.rand()
 
 
-Q[(4,4),action] = 0 
 
-qsa = [0.3,0.1,0.2,0.4]
 
-def pi(state):
+
+
+def pi(state,epsilon=0.1):
     if np.random.rand()>epsilon:
-        return np.argmax(qsa)
+        action = np.argmax([Q[state][a] for a in range(4)])
+        return action 
     else:
-        return randint(1,4)
+        return np.random.randint(4)      # return random action with epsilon probability
     
 
-G = {}
 
-for i_episode in range(num_episodes):
-    done = False
-    transitions = []
 
-    while not done:
-        action = pi(state)
-        next_state,reward,done = env.step(action)   
-        state = next_state
+def on_policy(pi,Q,episodes=20,gamma=0.99,epsilon=0.1): 
 
-G = 0
+    returns = {}
+ 
 
-for state_t,action_t,reward_t in reversed(transitions):
-    G = reward_t + gamma*G
+    for i_episode in range(episodes):
+        state = env.reset()
+        done = False
+        transitions = []
 
-    if not (state_t,action_t) in G[state,action]:
-        G[(state_t,action_t)] = []
-    G[(state_t,action_t)].append(G)
+        print(f"Episode{i_episode + 1}/{episodes}")
 
-    Q[state_t,action_t] = np.mean(G[(state_t,action_t)])     
+        #run one episode
+    
 
-print(Q[state_t,action_t])
+        while not done:
+            action = pi(state,epsilon)
+            next_state,reward,done, info = env.step(action) 
+            transitions.append([state,action,reward]) 
 
-        
+            env.render()
+            time.sleep(0.01)
+
+            state = next_state
+
+        G = 0
+
+        for state_t,action_t,reward_t in reversed(transitions):
+            G = reward_t + gamma*G     #update return
+
+            
+
+
+            if not (state_t,action_t) in returns:
+                returns[(state_t,action_t)] = []
+            returns[(state_t,action_t)].append(G)
+
+            Q[state_t,action_t] = np.mean(returns[(state_t,action_t)])   
+
+    return Q
+
+Q = on_policy(pi,Q,episodes = 20)
+
+print("Learned Q-values:")
+
+for state in Q:
+    print(f"State {state} : {Q[state]}")
